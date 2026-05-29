@@ -21,7 +21,6 @@ import sys
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Self,
     cast,
@@ -5660,74 +5659,6 @@ class DataFrame(NDFrame, OpsMixin):
         for k, v in kwargs.items():
             data[k] = com.apply_if_callable(v, data)
         return data
-
-    def mutate(
-        self,
-        name: str,
-        input_columns: list[str],
-        transform: Callable,
-    ) -> None:
-        """
-        Create or modify a column by applying a transform to input columns.
-
-        This method modifies the DataFrame in place, creating a new column
-        or overwriting an existing column by applying a transform function
-        to specified input columns.
-
-        Parameters
-        ----------
-        name : str
-            Name of the column to create or overwrite.
-        input_columns : list of str
-            List of column names to pass as arguments to the transform function,
-            in the order they will be passed.
-        transform : callable
-            Function that takes len(input_columns) arguments and returns
-            the values for the new column. The function should accept
-            array-like inputs.
-
-        Returns
-        -------
-        None
-            This method modifies the DataFrame in place and returns None.
-
-        Raises
-        ------
-        KeyError
-            If any column in input_columns is not present in the DataFrame.
-
-        See Also
-        --------
-        DataFrame.assign : Assign new columns to a DataFrame, returning a copy.
-        DataFrame.apply : Apply a function along an axis of the DataFrame.
-
-        Examples
-        --------
-        >>> import numpy as np
-        >>> df = pd.DataFrame({"x": [1.0, 2.0, 3.0], "y": [4.0, 5.0, 6.0]})
-        >>> df.mutate(name="log_x", input_columns=["x"], transform=np.log)
-        >>> df
-             x    y     log_x
-        0  1.0  4.0  0.000000
-        1  2.0  5.0  0.693147
-        2  3.0  6.0  1.098612
-
-        >>> df = pd.DataFrame({"a": [1, 2, 3], "b": [4, 5, 6]})
-        >>> df.mutate(name="sum_a_b", input_columns=["a", "b"], transform=lambda a, b: a + b)
-        >>> df
-           a  b  sum_a_b
-        0  1  4        5
-        1  2  5        7
-        2  3  6        9
-        """
-        missing_cols = [col for col in input_columns if col not in self.columns]
-        if missing_cols:
-            raise KeyError(
-                f"The following input_columns are missing from the DataFrame: {missing_cols}"
-            )
-
-        columns_data = [self[col] for col in input_columns]
-        self[name] = transform(*columns_data)
 
     def _sanitize_column(self, value) -> tuple[ArrayLike, BlockValuesRefs | None]:
         """
