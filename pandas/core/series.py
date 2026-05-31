@@ -5501,6 +5501,99 @@ Keep all original rows and also all original values
 
         return lmask & rmask
 
+    def case_when(self, caselist, default=lib.no_default) -> Series:
+        """
+        Replace values based on conditions specified in caselist.
+
+        This function returns a Series with values replaced according to
+        the conditions and outcomes provided in caselist. The conditions
+        are evaluated in order, with the first matching condition determining
+        the outcome.
+
+        Parameters
+        ----------
+        caselist : list of tuples
+            A list of (query, outcome) pairs where query is a 1-D boolean
+            array-like object or a callable, and outcome is a scalar value.
+            Each query is evaluated in order, and when a query is True,
+            the corresponding outcome is used.
+        default : scalar, optional
+            Default value to use when no query matches. If not provided,
+            the original Series values are used.
+
+        Returns
+        -------
+        Series
+            Series with values replaced according to the caselist conditions.
+
+        Raises
+        ------
+        TypeError
+            If all outcomes do not have the same dtype.
+
+        See Also
+        --------
+        Series.where : Replace values where condition is False.
+        Series.mask : Replace values where condition is True.
+
+        Examples
+        --------
+        >>> s = pd.Series([1, 2, 3, 4, 5])
+        >>> s.case_when([(s < 3, 100), (s > 3, 200)])
+        0    100
+        1    100
+        2      3
+        3    200
+        4    200
+        dtype: int64
+
+        >>> s.case_when([(s < 3, 100), (s > 3, 200)], default=0)
+        0    100
+        1    100
+        2      0
+        3    200
+        4    200
+        dtype: int64
+        """
+        if not isinstance(caselist, list):
+            raise TypeError("caselist must be a list of tuples")
+        
+        if len(caselist) == 0:
+            if default is lib.no_default:
+                return self.copy()
+            else:
+                return self.copy().fillna(default)
+        
+        outcomes = [outcome for _, outcome in caselist]
+        
+        if len(outcomes) > 0:
+            first_outcome = outcomes[0]
+            first_dtype = np.array([first_outcome]).dtype
+            
+            for outcome in outcomes[1:]:
+                outcome_dtype = np.array([outcome]).dtype
+                if outcome_dtype != first_dtype:
+                    raise TypeError(
+                        f"All outcomes must have the same dtype. "
+                        f"Found {first_dtype} and {outcome_dtype}"
+                    )
+        
+        if default is lib.no_default:
+            result = self.copy()
+        else:
+            result = self.copy()
+            result[:] = default
+        
+        for query, outcome in reversed(caselist):
+            if callable(query):
+                mask = query(self)
+            else:
+                mask = query
+            
+            result = result.where(~mask, outcome)
+        
+        return result
+
     # ----------------------------------------------------------------------
     # Convert to types that support pd.NA
 
